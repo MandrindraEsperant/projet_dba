@@ -2,3 +2,12 @@ salut dawôly ,
 samy mampiasa ny dossier tandrify azy de amin'ity document ity ny information important
 
 aleo mba branch main iany no ampiasaintsika rehetra
+
+Le etapes d'execution de scipt SQL pour la base de données:
+
+1-create_db_if_not_exist.sql
+2-create_table.sql
+3-audit_func.sql
+4-create_trigger_audit_produits.sql
+5-test_2_produit.sql
+6-create_user.sql

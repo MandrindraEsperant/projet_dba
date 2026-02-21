@@ -1,7 +1,15 @@
-const pool = require("../config/db");
-
+// const pool = require("../config/db");
+const { Pool } = require("pg");
 // GET all produits
 exports.getProduits = async (req, res) => {
+
+  const pool = new Pool({
+    user: req.session.user.username,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: req.session.user.password,
+    port: process.env.DB_PORT,
+  })
   try {
     const result = await pool.query("SELECT * FROM produits ORDER BY id DESC");
     res.json(result.rows);
@@ -14,6 +22,13 @@ exports.getProduits = async (req, res) => {
 exports.getProduitById = async (req, res) => {
   try {
     const { id } = req.params;
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
     const result = await pool.query("SELECT * FROM produits WHERE id = $1", [id]);
 
     if (result.rows.length === 0)
@@ -29,6 +44,13 @@ exports.getProduitById = async (req, res) => {
 exports.createProduit = async (req, res) => {
   try {
     const { nom, prix, stock } = req.body;
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
 
     const result = await pool.query(
       `INSERT INTO produits (nom, prix, stock)
@@ -46,6 +68,13 @@ exports.createProduit = async (req, res) => {
 // UPDATE produit
 exports.updateProduit = async (req, res) => {
   try {
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
     const { id } = req.params;
     const { nom, prix, stock } = req.body;
 
@@ -70,7 +99,13 @@ exports.updateProduit = async (req, res) => {
 exports.deleteProduit = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
     const result = await pool.query(
       "DELETE FROM produits WHERE id = $1 RETURNING *",
       [id]

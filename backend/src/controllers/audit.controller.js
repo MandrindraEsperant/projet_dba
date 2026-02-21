@@ -1,7 +1,15 @@
-const pool = require("../config/db");
-
+// const pool = require("../config/db");
+const { Pool } = require("pg");
 // GET all audit logs
 exports.getAuditLogs = async (req, res) => {
+  
+  const pool = new Pool({
+    user: req.session.user.username,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: req.session.user.password,
+    port: process.env.DB_PORT,
+  })
   try {
     const result = await pool.query(
       "SELECT * FROM audit_log ORDER BY date_action DESC"
@@ -16,6 +24,13 @@ exports.getAuditLogs = async (req, res) => {
 exports.getAuditLogById = async (req, res) => {
   try {
     const { id } = req.params;
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
     const result = await pool.query(
       "SELECT * FROM audit_log WHERE id_audit = $1",
       [id]
@@ -34,6 +49,13 @@ exports.getAuditLogById = async (req, res) => {
 exports.deleteAuditLog = async (req, res) => {
   try {
     const { id } = req.params;
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
 
     const result = await pool.query(
       "DELETE FROM audit_log WHERE id_audit = $1 RETURNING *",

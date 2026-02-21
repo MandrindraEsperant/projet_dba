@@ -5,18 +5,18 @@ const login = async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({ 
-      message: "Nom d'utilisateur et mot de passe requis" 
+    return res.status(400).json({
+      message: "Nom d'utilisateur et mot de passe requis"
     });
   }
 
   try {
     // Création d'un pool temporaire avec les identifiants fournis
     const userPool = new Pool({
-      user:  process.env.DB_USER,
+      user: username,
       host: process.env.DB_HOST,
       database: process.env.DB_NAME,
-      password: process.env.DB_PASSWORD,
+      password: password,
       port: process.env.DB_PORT,
     });
 
@@ -29,18 +29,19 @@ const login = async (req, res) => {
     // Stockage minimal dans la session (NE PAS stocker le mot de passe !)
     req.session.user = {
       username,
+      password,
       connectedAt: new Date(),
     };
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: "Connexion réussie",
       user: { username }
     });
 
   } catch (err) {
     console.error("Erreur login :", err.message);
-    return res.status(401).json({ 
-      message: "Identifiants PostgreSQL invalides" 
+    return res.status(401).json({
+      message: "Identifiants PostgreSQL invalides"
     });
   }
 };
@@ -48,22 +49,22 @@ const login = async (req, res) => {
 // Fonction de logout
 const logout = (req, res) => {
   if (!req.session.user) {
-    return res.status(400).json({ 
-      message: "Pas de session active" 
+    return res.status(400).json({
+      message: "Pas de session active"
     });
   }
 
   req.session.destroy((err) => {
     if (err) {
       console.error("Erreur destroy session :", err);
-      return res.status(500).json({ 
-        message: "Erreur lors de la déconnexion" 
+      return res.status(500).json({
+        message: "Erreur lors de la déconnexion"
       });
     }
 
     res.clearCookie("connect.sid");
-    return res.status(200).json({ 
-      message: "Déconnexion réussie" 
+    return res.status(200).json({
+      message: "Déconnexion réussie"
     });
   });
 };

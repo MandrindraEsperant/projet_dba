@@ -1,6 +1,6 @@
 exports.isAuthenticated = (req, res, next) => {
   if (!req.session.user) {
-    return res.status(401).json({ message: "Non autorisé" });
+    return res.status(401).json({ message: "Non autorisé; connectez-vous d'abord" });
   }
   next();
 };

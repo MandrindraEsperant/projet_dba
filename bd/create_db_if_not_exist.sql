@@ -2,9 +2,9 @@ DO
 $$
 BEGIN
    IF NOT EXISTS (
-      SELECT FROM pg_database WHERE datname = 'administartion_db'
+      SELECT FROM pg_database WHERE datname = 'administration_db'
    ) THEN
-      EXECUTE 'CREATE DATABASE administartion_db';
+      EXECUTE 'CREATE DATABASE administration_db';
    END IF;
 END
-$$;
+$$; 

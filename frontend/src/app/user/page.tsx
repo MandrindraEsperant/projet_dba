@@ -1,43 +1,55 @@
 "use client";
 
-import { useState } from "react";
-import { addAuditLog } from "../audit-store";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../auth-context";
+import { Product } from "@/types";
+import { apiService } from "@/services/api.service";
+import { Modal } from "@/components/Modal";
 import {
+    Package,
     Plus,
+    Search,
+    Edit,
+    Trash,
+    AlertTriangle,
+    X,
+    Database,
     Pencil,
     Trash2,
-    Database,
-    PlusCircle,
-    X,
-    CheckCircle2,
     AlertCircle,
-    AlertTriangle
+    CheckCircle2
 } from "lucide-react";
 
-interface Item {
-    id: number;
-    name: string;
-    hardware: string;
-    count: number;
-}
-
 export default function UserPage() {
-    const { user, isLoading } = useAuth();
-    const [data, setData] = useState<Item[]>([
-        { id: 1, name: "Jean Dupont", hardware: "Ordinateur HP", count: 2 },
-        { id: 2, name: "Marie Curie", hardware: "Écran Dell 24\"", count: 1 },
-    ]);
+    const { user, isLoading: authLoading } = useAuth();
+    const [data, setData] = useState<Product[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const [newItem, setNewItem] = useState({ name: "", hardware: "", count: 0 });
-    const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const [newItem, setNewItem] = useState<Omit<Product, 'id'>>({ nom: "", prix: 0, stock: 0 });
+    const [editingItem, setEditingItem] = useState<Product | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Confirmation States
-    const [confirmDelete, setConfirmDelete] = useState<Item | null>(null);
-    const [confirmUpdate, setConfirmUpdate] = useState<Item | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<Product | null>(null);
+    const [confirmUpdate, setConfirmUpdate] = useState<Product | null>(null);
 
-    if (isLoading) return (
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const result = await apiService.getProducts();
+            setData(result);
+        } catch (error) {
+            console.error("Fetch Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user) fetchData();
+    }, [user]);
+
+    if (authLoading || isLoading) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-pulse">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-500 font-medium">Chargement du panneau...</p>
@@ -46,33 +58,32 @@ export default function UserPage() {
 
     if (!user) return null;
 
-    const handleAdd = (e: React.FormEvent) => {
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newItem.name || !newItem.hardware) return;
+        if (!newItem.nom) return;
 
-        const id = Date.now();
-        const entry = { id, ...newItem };
-        setData([...data, entry]);
-
-        addAuditLog({
-            user: user.name,
-            action: "INSERT",
-            details: `Attribution matos : [${newItem.hardware}] à [${newItem.name}] (Qté: ${newItem.count})`
-        });
-
-        setNewItem({ name: "", hardware: "", count: 0 });
-        setIsAddModalOpen(false);
+        try {
+            await apiService.addProduct(newItem);
+            fetchData();
+            setNewItem({ nom: "", prix: 0, stock: 0 });
+            setIsAddModalOpen(false);
+        } catch (error: any) {
+            console.error("Add Error:", error);
+            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+        }
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (!confirmDelete) return;
-        setData(data.filter(item => item.id !== confirmDelete.id));
-        addAuditLog({
-            user: user.name,
-            action: "DELETE",
-            details: `Suppression de l'attribution ID: ${confirmDelete.id} (${confirmDelete.hardware})`
-        });
-        setConfirmDelete(null);
+        try {
+            await apiService.deleteProduct(confirmDelete.id);
+            fetchData();
+            setConfirmDelete(null);
+        } catch (error: any) {
+            console.error("Delete Error:", error);
+            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+            setConfirmDelete(null);
+        }
     };
 
     const triggerUpdateConfirmation = (e: React.FormEvent) => {
@@ -82,16 +93,18 @@ export default function UserPage() {
         }
     };
 
-    const executeUpdate = () => {
+    const executeUpdate = async () => {
         if (!confirmUpdate) return;
-        setData(data.map(item => item.id === confirmUpdate.id ? confirmUpdate : item));
-        addAuditLog({
-            user: user.name,
-            action: "UPDATE",
-            details: `Modification attribution ID: ${confirmUpdate.id} (${confirmUpdate.hardware})`
-        });
-        setEditingItem(null);
-        setConfirmUpdate(null);
+        try {
+            await apiService.updateProduct(confirmUpdate.id, confirmUpdate);
+            fetchData();
+            setEditingItem(null);
+            setConfirmUpdate(null);
+        } catch (error: any) {
+            console.error("Update Error:", error);
+            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+            setConfirmUpdate(null);
+        }
     };
 
     return (
@@ -105,13 +118,15 @@ export default function UserPage() {
                     <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">Panneau de Contrôle</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Gérez les attributions de matériel aux utilisateurs.</p>
                 </div>
-                <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="btn btn-primary"
-                >
-                    <Plus size={20} />
-                    Ajouter Attribution
-                </button>
+                {(user.role === 'admin' || (user.permissions?.some(p => p === 'INSERT' || p === 'ALL'))) && (
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="btn btn-primary"
+                    >
+                        <Plus size={20} />
+                        Ajouter Attribution
+                    </button>
+                )}
             </header>
 
             <div className="grid grid-cols-1 gap-8">
@@ -128,9 +143,9 @@ export default function UserPage() {
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Nom Utilisateur</th>
-                                    <th>Matériel</th>
-                                    <th>Nombre</th>
+                                    <th>Nom du Produit</th>
+                                    <th>Prix</th>
+                                    <th>Stock</th>
                                     <th className="text-right px-6">Actions</th>
                                 </tr>
                             </thead>
@@ -139,32 +154,36 @@ export default function UserPage() {
                                     <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                         <td className="font-mono text-xs text-slate-400">{item.id}</td>
                                         <td>
-                                            <span className="font-semibold text-slate-900 dark:text-slate-100">{item.name}</span>
+                                            <span className="font-semibold text-slate-900 dark:text-slate-100">{item.nom}</span>
                                         </td>
                                         <td>
-                                            <span className="text-slate-600 dark:text-slate-300 font-medium">{item.hardware}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 font-medium">{item.prix} €</span>
                                         </td>
                                         <td>
                                             <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md text-xs font-bold">
-                                                {item.count}
+                                                {item.stock}
                                             </span>
                                         </td>
                                         <td className="text-right px-6">
                                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => setEditingItem(item)}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                                                    title="Modifier"
-                                                >
-                                                    <Pencil size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setConfirmDelete(item)}
-                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                                    title="Supprimer"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                {(user.role === 'admin' || (user.permissions?.some(p => p === 'UPDATE' || p === 'ALL'))) && (
+                                                    <button
+                                                        onClick={() => setEditingItem(item)}
+                                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                                                        title="Modifier"
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                )}
+                                                {(user.role === 'admin' || (user.permissions?.some(p => p === 'DELETE' || p === 'ALL'))) && (
+                                                    <button
+                                                        onClick={() => setConfirmDelete(item)}
+                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                        title="Supprimer"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -192,150 +211,142 @@ export default function UserPage() {
             </div>
 
             {/* Modal Ajout */}
-            {isAddModalOpen && (
-                <div className="modal-backdrop">
-                    <div className="modal-content">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                                <PlusCircle className="text-blue-600" />
-                                Nouvelle Attribution
-                            </h3>
-                            <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleAdd} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom de l'utilisateur</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="Ex: Babity Eisenhower"
-                                    value={newItem.name}
-                                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Matériel</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="Ex: Souris, Clavier, PC..."
-                                    value={newItem.hardware}
-                                    onChange={(e) => setNewItem({ ...newItem, hardware: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nombre</label>
-                                <input
-                                    type="number"
-                                    className="input"
-                                    min="1"
-                                    value={newItem.count}
-                                    onChange={(e) => setNewItem({ ...newItem, count: parseInt(e.target.value) || 0 })}
-                                    required
-                                />
-                            </div>
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn btn-secondary flex-1">
-                                    Annuler
-                                </button>
-                                <button type="submit" className="btn btn-primary flex-1">
-                                    Enregistrer
-                                </button>
-                            </div>
-                        </form>
+            <Modal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                title="Nouvelle Attribution"
+            >
+                <form onSubmit={handleAdd} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du produit</label>
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Ex: Clavier Mécanique"
+                            value={newItem.nom}
+                            onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })}
+                            required
+                        />
                     </div>
-                </div>
-            )}
+                    <div>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Prix</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            className="input"
+                            placeholder="0.00"
+                            value={newItem.prix}
+                            onChange={(e) => setNewItem({ ...newItem, prix: parseFloat(e.target.value) || 0 })}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Stock</label>
+                        <input
+                            type="number"
+                            className="input"
+                            min="0"
+                            value={newItem.stock}
+                            onChange={(e) => setNewItem({ ...newItem, stock: parseInt(e.target.value) || 0 })}
+                            required
+                        />
+                    </div>
+                    <div className="pt-4 flex gap-3">
+                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn btn-secondary flex-1">
+                            Annuler
+                        </button>
+                        <button type="submit" className="btn btn-primary flex-1">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </Modal>
 
             {/* Modal Modification */}
-            {editingItem && (
-                <div className="modal-backdrop">
-                    <div className="modal-content">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                                <Pencil size={20} className="text-blue-600" />
-                                Modifier l'attribution
-                            </h3>
-                            <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600">
-                                <X size={24} />
+            <Modal
+                isOpen={!!editingItem}
+                onClose={() => setEditingItem(null)}
+                title="Modifier l'attribution"
+            >
+                {editingItem && (
+                    <form onSubmit={triggerUpdateConfirmation} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du Produit</label>
+                            <input
+                                type="text"
+                                className="input"
+                                value={editingItem.nom}
+                                onChange={(e) => setEditingItem({ ...editingItem, nom: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Prix</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                className="input"
+                                value={editingItem.prix}
+                                onChange={(e) => setEditingItem({ ...editingItem, prix: parseFloat(e.target.value) || 0 })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Stock</label>
+                            <input
+                                type="number"
+                                className="input"
+                                min="0"
+                                value={editingItem.stock}
+                                onChange={(e) => setEditingItem({ ...editingItem, stock: parseInt(e.target.value) || 0 })}
+                                required
+                            />
+                        </div>
+                        <div className="pt-4 flex gap-3">
+                            <button type="button" onClick={() => setEditingItem(null)} className="btn btn-secondary flex-1">
+                                Annuler
+                            </button>
+                            <button type="submit" className="btn btn-primary flex-1">
+                                Mettre à jour
                             </button>
                         </div>
-                        <form onSubmit={triggerUpdateConfirmation} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom Utilisateur</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    value={editingItem.name}
-                                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Matériel</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    value={editingItem.hardware}
-                                    onChange={(e) => setEditingItem({ ...editingItem, hardware: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nombre</label>
-                                <input
-                                    type="number"
-                                    className="input"
-                                    min="1"
-                                    value={editingItem.count}
-                                    onChange={(e) => setEditingItem({ ...editingItem, count: parseInt(e.target.value) || 0 })}
-                                    required
-                                />
-                            </div>
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setEditingItem(null)} className="btn btn-secondary flex-1">
-                                    Annuler
-                                </button>
-                                <button type="submit" className="btn btn-primary flex-1">
-                                    Mettre à jour
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                    </form>
+                )}
+            </Modal>
 
-            {/* Modal Confirmation Suppression */}
-            {confirmDelete && (
-                <div className="modal-backdrop z-[60]">
-                    <div className="modal-content !max-w-sm text-center">
+            {/* Confirmation Suppression */}
+            <Modal
+                isOpen={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                title="Confirmer la suppression"
+            >
+                {confirmDelete && (
+                    <div className="text-center">
                         <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Trash2 size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Confirmer la suppression</h3>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">
-                            Voulez-vous vraiment supprimer l'attribution de <strong>{confirmDelete.hardware}</strong> à <strong>{confirmDelete.name}</strong> ?
+                            Voulez-vous vraiment supprimer le produit <strong>{confirmDelete.nom}</strong> ?
                         </p>
                         <div className="flex gap-3">
                             <button onClick={() => setConfirmDelete(null)} className="btn btn-secondary flex-1">Retour</button>
                             <button onClick={executeDelete} className="btn btn-primary bg-red-600 hover:bg-red-700 border-none flex-1">Supprimer</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
-            {/* Modal Confirmation Modification */}
-            {confirmUpdate && (
-                <div className="modal-backdrop z-[60]">
-                    <div className="modal-content !max-w-sm text-center">
+            {/* Confirmation Modification */}
+            <Modal
+                isOpen={!!confirmUpdate}
+                onClose={() => setConfirmUpdate(null)}
+                title="Confirmer les changements"
+            >
+                {confirmUpdate && (
+                    <div className="text-center">
                         <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle2 size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Confirmer les changements</h3>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">
                             Les modifications pour l'attribution ID: {confirmUpdate.id} vont être enregistrées. Continuer ?
                         </p>
@@ -344,8 +355,8 @@ export default function UserPage() {
                             <button onClick={executeUpdate} className="btn btn-primary flex-1">Confirmer</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 }

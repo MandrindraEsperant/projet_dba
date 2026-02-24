@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UserPlus, Mail, Lock, User, ArrowRight } from "lucide-react";
-import { addAuditLog } from "../audit-store";
 
 export default function SignupPage() {
     const [name, setName] = useState("");
@@ -18,19 +17,13 @@ export default function SignupPage() {
         setIsLoading(true);
 
         // Simulation d'inscription locale
-        // Dans une vraie app, on enverrait ça au back
+        // Dans une vraie app, on enverrait ça au back via authService.signup
         setTimeout(() => {
             const newUser = { name, email, role: "user" };
 
             // On pourrait stocker temporairement pour la démo
             const existingUsers = JSON.parse(localStorage.getItem("mock_users") || "[]");
             localStorage.setItem("mock_users", JSON.stringify([...existingUsers, { ...newUser, password }]));
-
-            addAuditLog({
-                user: name,
-                action: "SIGNUP",
-                details: `Nouvel utilisateur inscrit : ${name} (${email})`
-            });
 
             setIsLoading(false);
             router.push("/login?signup_success=true");

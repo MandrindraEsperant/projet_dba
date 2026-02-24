@@ -1,21 +1,21 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-
-type Role = "admin" | "user" | null;
+import { User, Role } from "@/types";
+import { authService } from "@/services/auth.service";
 
 interface AuthContextType {
-    user: { name: string; role: Role } | null;
-    login: (name: string, role: Role) => void;
+    user: User | null;
+    login: (name: string, role: Role, password?: string) => Promise<void>;
     logout: () => void;
     isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<{ name: string; role: Role } | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
@@ -28,26 +28,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    const login = (name: string, role: Role) => {
-        const newUser = { name, role };
-        setUser(newUser);
-        localStorage.setItem("auth_user", JSON.stringify(newUser));
+    const login = async (username: string, role: Role, password?: string) => {
+        try {
+            const data = await authService.login(username, password);
+            const newUser: User = {
+                name: data.user.username,
+                role: data.user.role as Role,
+                permissions: data.user.permissions
+            };
+            setUser(newUser);
+            localStorage.setItem("auth_user", JSON.stringify(newUser));
 
-        // Audit log for login
-        const { addAuditLog } = require("./audit-store");
-        addAuditLog({
-            user: name,
-            action: "LOGIN",
-            details: `Connexion utilisateur réussie (Rôle: ${role})`
-        });
-
-        router.push(role === "admin" ? "/admin" : "/user");
+            router.push(newUser.role === "admin" ? "/admin" : "/user");
+        } catch (error: any) {
+            console.error("Login Error:", error.message);
+            alert(error.message);
+        }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem("auth_user");
-        router.push("/");
+    const logout = async () => {
+        try {
+            await authService.logout();
+            setUser(null);
+            localStorage.removeItem("auth_user");
+            router.push("/login"); // Fixed path
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
     };
 
     useEffect(() => {

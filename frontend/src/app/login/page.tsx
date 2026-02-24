@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../auth-context";
+import { Role } from "@/types";
 
 export default function LoginPage() {
     const [name, setName] = useState("");
-    const [role, setRole] = useState<"admin" | "user">("user");
+    const [password, setPassword] = useState("");
+    const [role, setRole] = useState<Exclude<Role, null>>("user");
     const { login } = useAuth();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (name) {
-            login(name, role);
+        if (name && password) {
+            await login(name, role, password);
         }
     };
 
@@ -42,6 +44,8 @@ export default function LoginPage() {
                             type="password"
                             className="input bg-white"
                             placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                             required
                         />
                     </div>

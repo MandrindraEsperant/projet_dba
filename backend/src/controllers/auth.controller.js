@@ -11,7 +11,6 @@ const login = async (req, res) => {
       message: "Nom d'utilisateur et mot de passe requis"
     });
   }
-
   try {
     // Création d'un pool temporaire avec les identifiants fournis
     const userPool = new Pool({
@@ -43,11 +42,8 @@ const login = async (req, res) => {
     if (!row) {
       throw new Error("Utilisateur introuvable");
     }
-
     const isSuper = permResult.rows[0]?.rolsuper || false;
     const permissions = isSuper ? ['ALL'] : (permResult.rows[0]?.permissions || []);
-    console.log("Permissions :", permissions);
-    console.log("Result rows :", permResult.rows);
 
     
 

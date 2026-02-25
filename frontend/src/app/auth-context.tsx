@@ -7,7 +7,7 @@ import { authService } from "@/services/auth.service";
 
 interface AuthContextType {
     user: User | null;
-    login: (name: string, role: Role, password?: string) => Promise<void>;
+    login: (name: string, password?: string) => Promise<void>;
     logout: () => void;
     isLoading: boolean;
 }
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    const login = async (username: string, role: Role, password?: string) => {
+    const login = async (username: string, password?: string) => {
         try {
             const data = await authService.login(username, password);
             const newUser: User = {

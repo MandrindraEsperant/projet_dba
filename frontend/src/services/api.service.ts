@@ -19,16 +19,22 @@ export const apiService = {
     },
 
     async addProduct(product: Omit<Product, 'id'>): Promise<void> {
+
         const response = await fetch(`${API_BASE_URL}/produits`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(product),
             credentials: "include"
         });
-        if (!response.ok) throw new Error("Erreur lors de l'ajout du produit");
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
     },
 
     async updateProduct(id: number, product: Partial<Product>): Promise<void> {
+
         const response = await fetch(`${API_BASE_URL}/produits/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -36,16 +42,24 @@ export const apiService = {
             credentials: "include"
         });
         const data = await response.json();
-        console.log(data);
-        if (!response.ok) throw new Error("Erreur lors de la mise à jour");
+
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+
     },
 
     async deleteProduct(id: number): Promise<void> {
+        
         const response = await fetch(`${API_BASE_URL}/produits/${id}`, {
             method: "DELETE",
             credentials: "include"
         });
-        if (!response.ok) throw new Error("Erreur lors de la suppression");
+         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
     },
 
     // Audit

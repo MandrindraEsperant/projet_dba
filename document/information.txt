@@ -10,4 +10,4 @@ Le etapes d'execution de scipt SQL pour la base de données:
 3-audit_func.sql
 4-create_trigger_audit_produits.sql
 5-test_2_produit.sql
-6-create_user.sql
+6-connectez-vous à l'utilisateur pardefaut postgres

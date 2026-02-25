@@ -288,7 +288,7 @@ export default function AdminPage() {
                                             {logs.map((log) => (
                                                 <tr key={log.id_audit} className="text-xs">
                                                     <td>
-                                                        <div className="font-bold text-slate-900">{log.nom_utilisateur}</div>
+                                                        <div className="font-bold text-white text-slate-900">{log.nom_utilisateur}</div>
                                                         <div className="text-[10px] text-slate-400 font-mono">{log.machine_hote || 'N/A'}</div>
                                                     </td>
                                                     <td>

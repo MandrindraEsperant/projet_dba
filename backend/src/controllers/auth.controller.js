@@ -1,4 +1,6 @@
 const { Pool } = require("pg");
+const format = require('pg-format'); // Importation de l'outil de formatage sécurisé
+
 
 // Fonction de login (tentative de connexion via identifiants PostgreSQL)
 const login = async (req, res) => {
@@ -36,8 +38,18 @@ const login = async (req, res) => {
       WHERE r.rolname = $1
     `, [username]);
 
+    const row = permResult.rows[0];
+
+    if (!row) {
+      throw new Error("Utilisateur introuvable");
+    }
+
     const isSuper = permResult.rows[0]?.rolsuper || false;
     const permissions = isSuper ? ['ALL'] : (permResult.rows[0]?.permissions || []);
+    console.log("Permissions :", permissions);
+    console.log("Result rows :", permResult.rows);
+
+    
 
     // Important : on ferme immédiatement la connexion
     await userPool.end();
@@ -125,6 +137,7 @@ const getUsers = async (req, res) => {
   }
 };
 
+
 const createUser = async (req, res) => {
   const { name, password, role, permissions } = req.body;
 
@@ -141,22 +154,34 @@ const createUser = async (req, res) => {
   });
 
   try {
-    // 1. Créer le rôle
-    const createRoleQuery = role === 'admin'
-      ? `CREATE ROLE "${name}" WITH LOGIN PASSWORD '${password}' SUPERUSER`
-      : `CREATE ROLE "${name}" WITH LOGIN PASSWORD '${password}'`;
+    // 1. Créer le rôle de manière sécurisée
+    // %I = Identifier (nom d'objet, sera mis entre doubles guillemets)
+    // %L = Literal (valeur, sera mise entre simples guillemets et échappée)
+    const sqlCreate = role === 'admin'
+      ? format('CREATE ROLE %I WITH LOGIN PASSWORD %L SUPERUSER', name, password)
+      : format('CREATE ROLE %I WITH LOGIN PASSWORD %L', name, password);
 
-    await pool.query(createRoleQuery);
+    // const sqlSeq = format('GRANT USAGE, SELECT, UPDATE ON SEQUENCE audit_log_id_audit_seq TO %I', name);
 
-    // 2. Accorder l'usage du schéma
-    await pool.query(`GRANT USAGE ON SCHEMA public TO "${name}"`);
-    await pool.query(`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "${name}"`);
 
-    // 3. Accorder les permissions spécifiques sur la table produits
+    await pool.query(sqlCreate);
+    // await pool.query(sqlSeq);
+
+    // 2. Accorder l'usage du schéma (Sécurisé avec %I)
+    await pool.query(format('GRANT USAGE ON SCHEMA public TO %I', name));
+    await pool.query(format('GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO %I', name));
+
+    // 3. Accorder les permissions spécifiques
     if (role !== 'admin' && permissions && permissions.length > 0) {
+      // On nettoie chaque permission pour éviter l'injection ici aussi
       const validPermissions = permissions.includes('ALL') ? ['ALL'] : permissions;
-      const permsString = validPermissions.join(', ');
-      await pool.query(`GRANT ${permsString} ON produits TO "${name}"`);
+      
+      // On construit la liste des privilèges (ex: SELECT, INSERT) 
+      // Attention: on utilise %s ici car les privilèges sont des mots-clés SQL fixes
+      const permsString = validPermissions.join(', '); 
+      
+      const sqlGrant = format('GRANT %s ON produits TO %I', permsString, name);
+      await pool.query(sqlGrant);
     }
 
     res.status(201).json({ message: "Utilisateur créé avec succès" });
@@ -167,6 +192,48 @@ const createUser = async (req, res) => {
     await pool.end();
   }
 };
+// const createUser = async (req, res) => {
+//   const { name, password, role, permissions } = req.body;
+
+//   if (!name || !password) {
+//     return res.status(400).json({ message: "Nom et mot de passe requis" });
+//   }
+
+//   const pool = new Pool({
+//     user: req.session.user.username,
+//     host: process.env.DB_HOST,
+//     database: process.env.DB_NAME,
+//     password: req.session.user.password,
+//     port: process.env.DB_PORT,
+//   });
+
+//   try {
+//     // 1. Créer le rôle
+//     const createRoleQuery = role === 'admin'
+//       ? `CREATE ROLE "${name}" WITH LOGIN PASSWORD '${password}' SUPERUSER`
+//       : `CREATE ROLE "${name}" WITH LOGIN PASSWORD '${password}'`;
+
+//     await pool.query(createRoleQuery);
+
+//     // 2. Accorder l'usage du schéma
+//     await pool.query(`GRANT USAGE ON SCHEMA public TO "${name}"`);
+//     await pool.query(`GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "${name}"`);
+
+//     // 3. Accorder les permissions spécifiques sur la table produits
+//     if (role !== 'admin' && permissions && permissions.length > 0) {
+//       const validPermissions = permissions.includes('ALL') ? ['ALL'] : permissions;
+//       const permsString = validPermissions.join(', ');
+//       await pool.query(`GRANT ${permsString} ON produits TO "${name}"`);
+//     }
+
+//     res.status(201).json({ message: "Utilisateur créé avec succès" });
+//   } catch (err) {
+//     console.error("Erreur création utilisateur :", err);
+//     res.status(500).json({ message: "Erreur lors de la création", detail: err.message });
+//   } finally {
+//     await pool.end();
+//   }
+// };
 
 const updateUserPermissions = async (req, res) => {
   const { username } = req.params;

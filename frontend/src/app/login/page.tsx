@@ -2,18 +2,18 @@
 
 import React, { useState } from "react";
 import { useAuth } from "../auth-context";
-import { Role } from "@/types";
+// import { Role } from "@/types";
 
 export default function LoginPage() {
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
-    const [role, setRole] = useState<Exclude<Role, null>>("user");
+    // const [role, setRole] = useState<Exclude<Role, null>>("user");
     const { login } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (name && password) {
-            await login(name, role, password);
+            await login(name, password);
         }
     };
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <div>
+                    {/* <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Rôle d'Accès</label>
                         <div className="grid grid-cols-2 gap-4">
                             <button
@@ -74,7 +74,7 @@ export default function LoginPage() {
                                 Administrateur
                             </button>
                         </div>
-                    </div>
+                    </div> */}
 
                     <button type="submit" className="btn btn-primary w-full py-3 text-lg mt-4">
                         Se Connecter

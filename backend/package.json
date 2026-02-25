@@ -20,6 +20,7 @@
     "forwarded": "^0.2.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
+    "pg-format": "^1.0.4",
     "proxy-addr": "^2.0.7",
     "uuid": "^13.0.0"
   },

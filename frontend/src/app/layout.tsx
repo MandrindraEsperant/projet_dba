@@ -86,9 +86,9 @@ export default function RootLayout({
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
           </main>
-          <footer className="py-6 border-t border-gray-100 text-center text-sm text-gray-500 bg-gray-50">
-            &copy; 2024 AuditSystem Pro - Créé avec Next.js
-          </footer>
+         <footer className="py-6 border-t border-gray-200 text-center text-sm text-gray-500 bg-gray-50">
+  &copy; {new Date().getFullYear()} AuditSystem Pro - Créé par Mandrindra, Andronique, Eisenhwoher et Fitahiana avec <span className="font-semibold">Next.js</span>
+</footer>
         </AuthProvider>
       </body>
     </html>

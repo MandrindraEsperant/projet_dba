@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter, usePathname } from "next/navigation";
 import { User, Role } from "@/types";
 import { authService } from "@/services/auth.service";
+import { useToast } from "./toast-context";
 
 interface AuthContextType {
     user: User | null;
@@ -15,6 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+    const { showToast } = useToast();
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
@@ -38,11 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             setUser(newUser);
             localStorage.setItem("auth_user", JSON.stringify(newUser));
-
+            showToast(`Bienvenue, ${newUser.name} !`, "success");
             router.push(newUser.role === "admin" ? "/admin" : "/user");
         } catch (error: any) {
             console.error("Login Error:", error.message);
-            alert(error.message);
+            showToast(error.message || "Erreur lors de la connexion", "error");
         }
     };
 
@@ -51,9 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await authService.logout();
             setUser(null);
             localStorage.removeItem("auth_user");
+            showToast("Déconnexion réussie", "info");
             router.push("/login"); // Fixed path
         } catch (error) {
             console.error("Logout Error:", error);
+            showToast("Erreur lors de la déconnexion", "error");
         }
     };
 

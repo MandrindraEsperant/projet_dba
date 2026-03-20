@@ -15,6 +15,17 @@
   --card-bg: #ffffff;
 }
 
+
+/* Désactive l'affichage de l'overlay d'erreurs et de l'indicateur Next.js */
+nextjs-portal, 
+#nextjs__container_build_error_label,
+#nextjs__container_errors {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #020617;
@@ -128,4 +139,38 @@ body {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
   padding: 24px;
+}
+/* Toast Animations */
+@keyframes toast-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-toast-down {
+  animation: toast-down 0.3s ease-out forwards;
+}
+
+.toast-progress-bar {
+  height: 3px;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  background-color: currentColor;
+  opacity: 0.3;
+  animation: toast-progress 5s linear forwards;
 }

@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION generer_audit() 
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO audit_log(
+    INSERT INTO audit_compte(
         nom_utilisateur, 
         type_action, 
         table_concernee, 
@@ -17,7 +17,7 @@ BEGIN
         inet_client_addr(),                -- Adresse IP du client (optionnel)
         CASE 
             WHEN TG_OP = 'INSERT' THEN row_to_json(NEW)::text
-            WHEN TG_OP = 'UPDATE' THEN 'Avant: ' || row_to_json(OLD)::text || ' | Après: ' || row_to_json(NEW)::text
+            WHEN TG_OP = 'UPDATE' THEN 'Avant: ' || row_to_json(OLD)::text || ' | Apres: ' || row_to_json(NEW)::text
             WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)::text
         END
     );

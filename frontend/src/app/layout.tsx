@@ -5,6 +5,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "@/app/auth-context";
+import { ToastProvider } from "@/app/toast-context";
+import { ToastContainer } from "@/components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,7 +48,7 @@ function Navbar() {
             {user ? (
               <>
                 <div className="flex flex-col items-end mr-2">
-                  <span className="text-sm font-bold text-gray-900">{user.name}</span>
+                  <span className="text-sm font-bold text-gray-100">{user.name}</span>
                   <span className="text-[10px] uppercase tracking-widest text-blue-600 font-bold">
                     {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
                   </span>

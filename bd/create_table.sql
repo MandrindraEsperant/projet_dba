@@ -1,13 +1,13 @@
--- Table de travail (ex: une liste de produits)
-CREATE TABLE produits (
+-- Table de travail (ex: une liste de compte)
+CREATE TABLE compte (
     id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    prix DECIMAL(10,2),
-    stock INTEGER
+    n_compte VARCHAR(100) NOT NULL,
+    nom_client VARCHAR(100) NOT NULL,
+    solde DECIMAL(10,2)
 );
 
 -- Table d'Audit (Le registre du surveillant)
-CREATE TABLE audit_log (
+CREATE TABLE audit_compte (
     id_audit SERIAL PRIMARY KEY,
     nom_utilisateur VARCHAR(50),            -- L'utilisateur connecté
     type_action VARCHAR(20),                -- INSERT, UPDATE ou DELETE

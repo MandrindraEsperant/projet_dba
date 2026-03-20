@@ -24,14 +24,14 @@ const login = async (req, res) => {
     // Test de connexion simple
     await userPool.query("SELECT 1");
 
-    // Récupérer les permissions de l'utilisateur sur la table produits
+    // Récupérer les permissions de l'utilisateur sur la table compte
     const permResult = await userPool.query(`
       SELECT 
         r.rolsuper,
         (
           SELECT COALESCE(JSON_AGG(privilege_type), '[]'::json)
           FROM information_schema.role_table_grants 
-          WHERE grantee = r.rolname AND table_name = 'produits'
+          WHERE grantee = r.rolname AND table_name = 'compte'
         ) as permissions
       FROM pg_roles r
       WHERE r.rolname = $1
@@ -110,7 +110,7 @@ const getUsers = async (req, res) => {
   });
 
   try {
-    // Liste des utilisateurs avec leurs permissions sur la table produits
+    // Liste des utilisateurs avec leurs permissions sur la table compte
     const result = await pool.query(`
       SELECT 
         r.rolname as name, 
@@ -118,7 +118,7 @@ const getUsers = async (req, res) => {
         (
           SELECT COALESCE(JSON_AGG(privilege_type), '[]'::json)
           FROM information_schema.role_table_grants 
-          WHERE grantee = r.rolname AND table_name = 'produits'
+          WHERE grantee = r.rolname AND table_name = 'compte'
         ) as permissions
       FROM pg_roles r
       WHERE r.rolcanlogin = true 
@@ -160,24 +160,12 @@ const createUser = async (req, res) => {
     // const sqlSeq = format('GRANT USAGE, SELECT, UPDATE ON SEQUENCE audit_log_id_audit_seq TO %I', name);
 
 
-    await pool.query(sqlCreate);
-    // await pool.query(sqlSeq);
-
-    // 2. Accorder l'usage du schéma (Sécurisé avec %I)
-    await pool.query(format('GRANT USAGE ON SCHEMA public TO %I', name));
-    await pool.query(format('GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO %I', name));
-
-    // 3. Accorder les permissions spécifiques
+    // 3. Accorder les permissions spécifiques sur la table compte
     if (role !== 'admin' && permissions && permissions.length > 0) {
       // On nettoie chaque permission pour éviter l'injection ici aussi
       const validPermissions = permissions.includes('ALL') ? ['ALL'] : permissions;
-      
-      // On construit la liste des privilèges (ex: SELECT, INSERT) 
-      // Attention: on utilise %s ici car les privilèges sont des mots-clés SQL fixes
-      const permsString = validPermissions.join(', '); 
-      
-      const sqlGrant = format('GRANT %s ON produits TO %I', permsString, name);
-      await pool.query(sqlGrant);
+      const permsString = validPermissions.join(', ');
+      await pool.query(`GRANT ${permsString} ON compte TO "${name}"`);
     }
 
     res.status(201).json({ message: "Utilisateur créé avec succès" });
@@ -244,14 +232,14 @@ const updateUserPermissions = async (req, res) => {
   });
 
   try {
-    // 1. Révoquer toutes les permissions actuelles sur produits
-    await pool.query(`REVOKE ALL ON produits FROM "${username}"`);
+    // 1. Révoquer toutes les permissions actuelles sur compte
+    await pool.query(`REVOKE ALL ON compte FROM "${username}"`);
 
     // 2. Accorder les nouvelles permissions
     if (permissions && permissions.length > 0) {
       const validPermissions = permissions.includes('ALL') ? ['ALL'] : permissions;
       const permsString = validPermissions.join(', ');
-      await pool.query(`GRANT ${permsString} ON produits TO "${username}"`);
+      await pool.query(`GRANT ${permsString} ON compte TO "${username}"`);
     }
 
     res.json({ message: "Permissions mises à jour avec succès" });

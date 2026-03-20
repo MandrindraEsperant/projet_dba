@@ -1,8 +1,8 @@
-export interface Product {
+export interface Compte {
     id: number;
-    nom: string;
-    prix: number;
-    stock: number;
+    n_compte: string;
+    nom_client: string;
+    solde: number;
 }
 
 export interface AuditLog {

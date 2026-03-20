@@ -2,17 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../auth-context";
-import { Product } from "@/types";
+import { useToast } from "../toast-context";
+import { Compte } from "@/types";
 import { apiService } from "@/services/api.service";
 import { Modal } from "@/components/Modal";
 import {
-    Package,
     Plus,
-    Search,
-    Edit,
-    Trash,
-    AlertTriangle,
-    X,
     Database,
     Pencil,
     Trash2,
@@ -22,21 +17,22 @@ import {
 
 export default function UserPage() {
     const { user, isLoading: authLoading } = useAuth();
-    const [data, setData] = useState<Product[]>([]);
+    const { showToast } = useToast();
+    const [data, setData] = useState<Compte[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [newItem, setNewItem] = useState<Omit<Product, 'id'>>({ nom: "", prix: 0, stock: 0 });
-    const [editingItem, setEditingItem] = useState<Product | null>(null);
+    const [newItem, setNewItem] = useState<Omit<Compte, 'id'>>({ n_compte: "", nom_client: "", solde: 0 });
+    const [editingItem, setEditingItem] = useState<Compte | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Confirmation States
-    const [confirmDelete, setConfirmDelete] = useState<Product | null>(null);
-    const [confirmUpdate, setConfirmUpdate] = useState<Product | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<Compte | null>(null);
+    const [confirmUpdate, setConfirmUpdate] = useState<Compte | null>(null);
 
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const result = await apiService.getProducts();
+            const result = await apiService.getComptes();
             setData(result);
         } catch (error) {
             console.error("Fetch Error:", error);
@@ -60,28 +56,30 @@ export default function UserPage() {
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newItem.nom) return;
+        if (!newItem.n_compte) return;
 
         try {
-            await apiService.addProduct(newItem);
+            await apiService.addCompte(newItem);
             fetchData();
-            setNewItem({ nom: "", prix: 0, stock: 0 });
+            showToast(`Compte ${newItem.n_compte} de ${newItem.nom_client} ajouté avec succès`, "success");
+            setNewItem({ n_compte: "", nom_client: "", solde: 0 });
             setIsAddModalOpen(false);
         } catch (error: any) {
             console.error("Add Error:", error);
-            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+            showToast(error.message || "Erreur lors de l'ajout", "error");
         }
     };
 
     const executeDelete = async () => {
         if (!confirmDelete) return;
         try {
-            await apiService.deleteProduct(confirmDelete.id);
+            await apiService.deleteCompte(confirmDelete.id);
             fetchData();
+            showToast(`Compte de ${confirmDelete.nom_client} supprimé avec succès`, "danger");
             setConfirmDelete(null);
         } catch (error: any) {
             console.error("Delete Error:", error);
-            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+            showToast(error.message || "Erreur lors de la suppression", "error");
             setConfirmDelete(null);
         }
     };
@@ -96,13 +94,14 @@ export default function UserPage() {
     const executeUpdate = async () => {
         if (!confirmUpdate) return;
         try {
-            await apiService.updateProduct(confirmUpdate.id, confirmUpdate);
+            await apiService.updateCompte(confirmUpdate.id, confirmUpdate);
             fetchData();
+            showToast(`Compte de ${confirmUpdate.nom_client} modifié avec succès`, "success");
             setEditingItem(null);
             setConfirmUpdate(null);
         } catch (error: any) {
             console.error("Update Error:", error);
-            alert(error.message || "Action refusée : Vous n'avez pas les droits nécessaires.");
+            showToast(error.message || "Erreur lors de la mise à jour", "error");
             setConfirmUpdate(null);
         }
     };
@@ -143,9 +142,9 @@ export default function UserPage() {
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Nom du Produit</th>
-                                    <th>Prix</th>
-                                    <th>Stock</th>
+                                    <th>Numéro du Compte</th>
+                                    <th>Nom du Client</th>
+                                    <th>Solde (Ariary)</th>
                                     <th className="text-right px-6">Actions</th>
                                 </tr>
                             </thead>
@@ -154,14 +153,14 @@ export default function UserPage() {
                                     <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                         <td className="font-mono text-xs text-slate-400">{item.id}</td>
                                         <td>
-                                            <span className="font-semibold text-slate-900 dark:text-slate-100">{item.nom}</span>
+                                            <span className="font-semibold text-slate-900 dark:text-slate-100">{item.n_compte}</span>
                                         </td>
                                         <td>
-                                            <span className="text-slate-600 dark:text-slate-300 font-medium">{item.prix} €</span>
+                                            <span className="text-slate-600 dark:text-slate-300 font-medium">{item.nom_client}</span>
                                         </td>
                                         <td>
                                             <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md text-xs font-bold">
-                                                {item.stock}
+                                                {item.solde} Ariary
                                             </span>
                                         </td>
                                         <td className="text-right px-6">
@@ -218,36 +217,35 @@ export default function UserPage() {
             >
                 <form onSubmit={handleAdd} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du produit</label>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Numéro du compte</label>
                         <input
                             type="text"
                             className="input"
-                            placeholder="Ex: Clavier Mécanique"
-                            value={newItem.nom}
-                            onChange={(e) => setNewItem({ ...newItem, nom: e.target.value })}
+                            placeholder="Ex: 123456789"
+                            value={newItem.n_compte}
+                            onChange={(e) => setNewItem({ ...newItem, n_compte: e.target.value })}
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Prix</label>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du client</label>
                         <input
-                            type="number"
-                            step="0.01"
+                            type="text"
                             className="input"
-                            placeholder="0.00"
-                            value={newItem.prix}
-                            onChange={(e) => setNewItem({ ...newItem, prix: parseFloat(e.target.value) || 0 })}
+                            placeholder="Ex: John Doe"
+                            value={newItem.nom_client}
+                            onChange={(e) => setNewItem({ ...newItem, nom_client: e.target.value })}
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Stock</label>
+                        <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Solde (Ariary)</label>
                         <input
                             type="number"
                             className="input"
                             min="0"
-                            value={newItem.stock}
-                            onChange={(e) => setNewItem({ ...newItem, stock: parseInt(e.target.value) || 0 })}
+                            value={newItem.solde}
+                            onChange={(e) => setNewItem({ ...newItem, solde: parseInt(e.target.value) || 0 })}
                             required
                         />
                     </div>
@@ -271,34 +269,33 @@ export default function UserPage() {
                 {editingItem && (
                     <form onSubmit={triggerUpdateConfirmation} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du Produit</label>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Numéro du Compte</label>
                             <input
                                 type="text"
                                 className="input"
-                                value={editingItem.nom}
-                                onChange={(e) => setEditingItem({ ...editingItem, nom: e.target.value })}
+                                value={editingItem.n_compte}
+                                onChange={(e) => setEditingItem({ ...editingItem, n_compte: e.target.value })}
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Prix</label>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Nom du client</label>
                             <input
-                                type="number"
-                                step="0.01"
+                                type="text"
                                 className="input"
-                                value={editingItem.prix}
-                                onChange={(e) => setEditingItem({ ...editingItem, prix: parseFloat(e.target.value) || 0 })}
+                                value={editingItem.nom_client}
+                                onChange={(e) => setEditingItem({ ...editingItem, nom_client: e.target.value })}
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Stock</label>
+                            <label className="block text-sm font-semibold mb-1.5 text-slate-700 dark:text-slate-300">Solde (Ariary)</label>
                             <input
                                 type="number"
                                 className="input"
                                 min="0"
-                                value={editingItem.stock}
-                                onChange={(e) => setEditingItem({ ...editingItem, stock: parseInt(e.target.value) || 0 })}
+                                value={editingItem.solde}
+                                onChange={(e) => setEditingItem({ ...editingItem, solde: parseInt(e.target.value) || 0 })}
                                 required
                             />
                         </div>
@@ -326,7 +323,7 @@ export default function UserPage() {
                             <Trash2 size={32} />
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">
-                            Voulez-vous vraiment supprimer le produit <strong>{confirmDelete.nom}</strong> ?
+                            Voulez-vous vraiment supprimer le compte du client <strong>{confirmDelete.nom_client}</strong> numéro <strong>{confirmDelete.n_compte}</strong> ?
                         </p>
                         <div className="flex gap-3">
                             <button onClick={() => setConfirmDelete(null)} className="btn btn-secondary flex-1">Retour</button>
@@ -348,7 +345,7 @@ export default function UserPage() {
                             <CheckCircle2 size={32} />
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">
-                            Les modifications pour l'attribution ID: {confirmUpdate.id} vont être enregistrées. Continuer ?
+                            Les modifications pour le compte du client <strong>{confirmUpdate.nom_client}</strong> numéro <strong>{confirmUpdate.n_compte}</strong> vont être enregistrées. Continuer ?
                         </p>
                         <div className="flex gap-3">
                             <button onClick={() => setConfirmUpdate(null)} className="btn btn-secondary flex-1">Retour</button>

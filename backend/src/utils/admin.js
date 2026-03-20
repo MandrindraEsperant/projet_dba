@@ -8,6 +8,6 @@ app.get("/admin/audit", async (req, res) => {
     password: req.session.user.password,
   });
 
-  const result = await pool.query("SELECT * FROM audit_log ORDER BY date_action DESC");
+  const result = await pool.query("SELECT * FROM audit_compte ORDER BY date_action DESC");
   res.json(result.rows);
 });

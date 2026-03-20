@@ -1,9 +1,16 @@
 // GET all audit logs
 exports.getAuditLogs = async (req, res) => {
-  
+
+  const pool = new Pool({
+    user: req.session.user.username,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: req.session.user.password,
+    port: process.env.DB_PORT,
+  })
   try {
-    const result = await req.db.query(
-      "SELECT * FROM audit_log ORDER BY date_action DESC"
+    const result = await pool.query(
+      "SELECT * FROM audit_compte ORDER BY date_action DESC"
     );
     res.json(result.rows);
   } catch (error) {
@@ -15,8 +22,15 @@ exports.getAuditLogs = async (req, res) => {
 exports.getAuditLogById = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await req.db.query(
-      "SELECT * FROM audit_log WHERE id_audit = $1",
+    const pool = new Pool({
+      user: req.session.user.username,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: req.session.user.password,
+      port: process.env.DB_PORT,
+    })
+    const result = await pool.query(
+      "SELECT * FROM audit_compte WHERE id_audit = $1",
       [id]
     );
 
@@ -34,8 +48,8 @@ exports.deleteAuditLog = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await req.db.query(
-      "DELETE FROM audit_log WHERE id_audit = $1 RETURNING *",
+    const result = await pool.query(
+      "DELETE FROM audit_compte WHERE id_audit = $1 RETURNING *",
       [id]
     );
 

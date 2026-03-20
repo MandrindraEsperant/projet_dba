@@ -5,7 +5,7 @@ require("dotenv").config();
 
 
 const authRoutes = require("./routes/auth.routes");
-const produitRoutes = require("./routes/produit.routes");
+const compteRoutes = require("./routes/compte.routes");
 const auditController = require("./routes/audit.routes");
 
 const app = express();
@@ -13,7 +13,7 @@ const app = express();
 app.use(cors({
   origin: "http://localhost:3000",
   credentials: true
-})); 
+}));
 app.use(express.json());
 
 app.use(
@@ -28,8 +28,8 @@ app.use(
     },
   })
 );
- 
-app.use("/api/produits", produitRoutes);
+
+app.use("/api/compte", compteRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/audit", auditController);
 

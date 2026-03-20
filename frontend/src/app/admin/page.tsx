@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../auth-context";
+import { useToast } from "../toast-context";
 import { AuditLog, User as UserType, Role, Permission } from "@/types";
 import { apiService } from "@/services/api.service";
 import { Modal } from "@/components/Modal";
@@ -21,6 +22,7 @@ import {
 
 export default function AdminPage() {
     const { user: currentUser, isLoading: authLoading } = useAuth();
+    const { showToast } = useToast();
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [isLoadingLogs, setIsLoadingLogs] = useState(true);
 
@@ -82,10 +84,12 @@ export default function AdminPage() {
                 permissions: newUser.role === 'user' ? newUser.permissions : ['ALL']
             });
             await refreshUsers();
+            showToast(`Utilisateur "${newUser.name}" créé avec succès`, "success");
             setNewUser({ name: "", password: "", role: "user", permissions: [] });
             setIsAddUserModalOpen(false);
         } catch (error: any) {
-            alert(error.message);
+            console.error("Create User Error:", error);
+            showToast(error.message || "Erreur lors de la création", "error");
         }
     };
 
@@ -95,10 +99,12 @@ export default function AdminPage() {
         try {
             await apiService.updateUserPermissions(editingUser.name, editingUser.permissions || []);
             await refreshUsers();
+            showToast(`Permissions de "${editingUser.name}" mises à jour`, "success");
             setIsEditPermsModalOpen(false);
             setEditingUser(null);
         } catch (error: any) {
-            alert(error.message);
+            console.error("Update Perms Error:", error);
+            showToast(error.message || "Erreur lors de la mise à jour", "error");
         }
     };
 
@@ -107,9 +113,11 @@ export default function AdminPage() {
         try {
             await apiService.deleteUser(userToDelete.name);
             await refreshUsers();
+            showToast(`Accès de "${userToDelete.name}" révoqué`, "danger");
             setUserToDelete(null);
         } catch (error: any) {
-            alert(error.message);
+            console.error("Delete User Error:", error);
+            showToast(error.message || "Erreur lors de la révocation", "error");
         }
     };
 
@@ -288,8 +296,8 @@ export default function AdminPage() {
                                             {logs.map((log) => (
                                                 <tr key={log.id_audit} className="text-xs">
                                                     <td>
-                                                        <div className="font-bold text-white text-slate-900">{log.nom_utilisateur}</div>
-                                                        <div className="text-[10px] text-slate-400 font-mono">{log.machine_hote || 'N/A'}</div>
+                                                        <div className="font-bold  text-slate-200">{log.nom_utilisateur}</div>
+                                                        <div className="text-[10px] text-slate-100 font-mono">{log.machine_hote || 'N/A'}</div>
                                                     </td>
                                                     <td>
                                                         <span className={`px-2 py-0.5 rounded font-bold ${log.type_action === 'INSERT' ? 'bg-emerald-100 text-emerald-700' :
@@ -300,13 +308,13 @@ export default function AdminPage() {
                                                             {log.type_action}
                                                         </span>
                                                     </td>
-                                                    <td className="font-medium text-slate-600">
+                                                    <td className="font-medium text-slate-200">
                                                         {log.table_concernee}
                                                     </td>
-                                                    <td className="font-mono bg-slate-50/50 p-2 text-slate-600 border-x border-slate-100 max-w-xs truncate" title={log.details}>
+                                                    <td className="font-mono  p-2 text-slate-200 border-x border-slate-100 ">
                                                         {log.details}
                                                     </td>
-                                                    <td className="text-slate-500 whitespace-nowrap font-medium italic">
+                                                    <td className="text-slate-200 whitespace-nowrap font-medium italic">
                                                         {new Date(log.date_action).toLocaleString()}
                                                     </td>
                                                 </tr>
@@ -361,7 +369,7 @@ export default function AdminPage() {
 
                     {newUser.role === 'user' && (
                         <div className="space-y-2">
-                            <label className="block text-sm font-bold mb-1">Droits d'accès (Produits)</label>
+                            <label className="block text-sm font-bold mb-1">Droits d'accès (compte)</label>
                             <div className="grid grid-cols-2 gap-2">
                                 {[
                                     { label: 'Lecture simple', value: 'SELECT' },

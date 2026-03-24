@@ -83,15 +83,18 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col font-sans`}>
-        <AuthProvider>
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            {children}
-          </main>
-         <footer className="py-6 border-t border-gray-200 text-center text-sm text-gray-500 bg-gray-50">
-  &copy; {new Date().getFullYear()} AuditSystem Pro - Créé par Mandrindra, Andronique, Eisenhwoher et Fitahiana avec <span className="font-semibold">Next.js</span>
-</footer>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ToastContainer />
+            <Navbar />
+            <main className="flex-grow container mx-auto px-4 py-8">
+              {children}
+            </main>
+            <footer className="py-6 border-t border-gray-200 text-center text-sm text-gray-500 bg-gray-50">
+              &copy; {new Date().getFullYear()} AuditSystem Pro - Créé par Mandrindra, Andronique, Eisenhwoher et Fitahiana avec <span className="font-semibold">Next.js</span>
+            </footer>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

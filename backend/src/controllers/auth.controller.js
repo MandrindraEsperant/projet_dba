@@ -151,14 +151,16 @@ const createUser = async (req, res) => {
 
   try {
     // 1. Créer le rôle de manière sécurisée
-    // %I = Identifier (nom d'objet, sera mis entre doubles guillemets)
-    // %L = Literal (valeur, sera mise entre simples guillemets et échappée)
     const sqlCreate = role === 'admin'
       ? format('CREATE ROLE %I WITH LOGIN PASSWORD %L SUPERUSER', name, password)
       : format('CREATE ROLE %I WITH LOGIN PASSWORD %L', name, password);
 
-    // const sqlSeq = format('GRANT USAGE, SELECT, UPDATE ON SEQUENCE audit_log_id_audit_seq TO %I', name);
+    await pool.query(sqlCreate);
 
+    // 2. Accorder les permissions de base (usage du schéma et séquences)
+    // Nécessaire pour que l'utilisateur puisse voir les tables et utiliser l'audit (séquences)
+    await pool.query(format('GRANT USAGE ON SCHEMA public TO %I', name));
+    await pool.query(format('GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO %I', name));
 
     // 3. Accorder les permissions spécifiques sur la table compte
     if (role !== 'admin' && permissions && permissions.length > 0) {
